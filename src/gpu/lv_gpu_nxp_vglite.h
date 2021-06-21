@@ -37,7 +37,7 @@ extern "C" {
 /*********************
  *      INCLUDES
  *********************/
-#include "misc/lv_area.h"
+#include "../misc/lv_area.h"
 
 /*********************
  *      DEFINES
@@ -81,6 +81,7 @@ extern "C" {
 typedef struct {
 
     const lv_color_t * src;  /**< Source buffer pointer (must be aligned on 32 bytes)*/
+    void * src_vgbuf;        /**< Source vg_lite_buffer_t pointer*/
     lv_area_t src_area;      /**< Area to be copied from source*/
     lv_coord_t src_width;    /**< Source buffer width*/
     lv_coord_t src_height;   /**< Source buffer height*/
@@ -93,6 +94,7 @@ typedef struct {
     uint32_t dst_stride;     /**< Destination buffer stride in bytes (must be aligned on 16 px)*/
 
     lv_opa_t opa;            /**< Opacity - alpha mix (0 = source not copied, 255 = 100% opaque)*/
+    lv_opa_t *mask;          /**< Opacity mask matrix*/
 
 } lv_gpu_nxp_vglite_blit_info_t;
 
@@ -106,16 +108,16 @@ typedef struct {
 
 /***
  * Fills rectangular area in buffer.
- * @param[in] dest_buf Destination buffer pointer (must be aligned on 32 bytes)
- * @param[in] dest_width Destination buffer width in pixels ((must be aligned on 16 px)
- * @param[in] dest_height Destination buffer height in pixels
+ * @param[in] dst_buf Destination buffer pointer (must be aligned on 32 bytes)
+ * @param[in] dst_width Destination buffer width in pixels ((must be aligned on 16 px)
+ * @param[in] dst_height Destination buffer height in pixels
  * @param[in] fill_area Area to be filled
  * @param[in] color Fill color
  * @param[in] opa Opacity (255 = full, 128 = 50% background/50% color, 0 = no fill)
  * @retval LV_RES_OK Fill completed
  * @retval LV_RES_INV Error occurred (\see LV_GPU_NXP_VG_LITE_LOG_ERRORS)
  */
-lv_res_t lv_gpu_nxp_vglite_fill(lv_color_t * dest_buf, lv_coord_t dest_width, lv_coord_t dest_height,
+lv_res_t lv_gpu_nxp_vglite_fill(lv_color_t * dst_buf, lv_coord_t dst_width, lv_coord_t dst_height,
                                 const lv_area_t * fill_area, lv_color_t color, lv_opa_t opa);
 
 /***
@@ -125,6 +127,12 @@ lv_res_t lv_gpu_nxp_vglite_fill(lv_color_t * dest_buf, lv_coord_t dest_width, lv
  * @retval LV_RES_INV Error occurred (\see LV_GPU_NXP_VG_LITE_LOG_ERRORS)
  */
 lv_res_t lv_gpu_nxp_vglite_blit(lv_gpu_nxp_vglite_blit_info_t * blit);
+
+void lv_gpu_nxp_vglite_init(lv_color_t **buf1, lv_color_t** buf2, lv_coord_t fb_width, lv_coord_t fb_height);
+
+void lv_gpu_nxp_vglite_wait(struct _lv_disp_drv_t * disp_drv);
+
+lv_res_t init_vg_buf(void * vdst, uint32_t width, uint32_t height, uint32_t stride);
 
 #ifdef __cplusplus
 } /*extern "C"*/
