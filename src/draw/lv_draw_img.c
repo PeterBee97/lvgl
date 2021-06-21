@@ -17,6 +17,8 @@
     #include "../gpu/lv_gpu_stm32_dma2d.h"
 #elif LV_USE_GPU_NXP_PXP
     #include "../gpu/lv_gpu_nxp_pxp.h"
+#elif LV_USE_GPU_NXP_VG_LITE
+    #include "../gpu/lv_gpu_nxp_vglite.h"
 #endif
 
 /*********************
@@ -37,7 +39,11 @@ LV_ATTRIBUTE_FAST_MEM static lv_res_t lv_img_draw_core(const lv_area_t * coords,
 LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const lv_area_t * clip_area,
                                               const uint8_t * map_p,
                                               const lv_draw_img_dsc_t * draw_dsc,
-                                              bool chroma_key, bool alpha_byte);
+                                              bool chroma_key, bool alpha_byte
+#if LV_USE_GPU_NXP_VG_LITE
+                                            , void * vgbuf
+#endif
+                                              );
 
 static void show_error(const lv_area_t * coords, const lv_area_t * clip_area, const char * msg);
 static void draw_cleanup(_lv_img_cache_entry_t * cache);
@@ -273,7 +279,15 @@ LV_ATTRIBUTE_FAST_MEM static lv_res_t lv_img_draw_core(const lv_area_t * coords,
             return LV_RES_OK;
         }
 
+#if LV_USE_GPU_NXP_VG_LITE
+    if (cdsc->dec_dsc.src_type == LV_IMG_SRC_VARIABLE && cdsc->dec_dsc.user_data) { /*vgbuf has been allocated*/
+        lv_draw_map(coords, &mask_com, cdsc->dec_dsc.img_data, draw_dsc, chroma_keyed, alpha_byte, cdsc->dec_dsc.user_data);
+    } else {
+        lv_draw_map(coords, &mask_com, cdsc->dec_dsc.img_data, draw_dsc, chroma_keyed, alpha_byte, NULL);
+    }
+#else
         lv_draw_map(coords, &mask_com, cdsc->dec_dsc.img_data, draw_dsc, chroma_keyed, alpha_byte);
+#endif
     }
     /*The whole uncompressed image is not available. Try to read it line-by-line*/
     else {
@@ -312,7 +326,11 @@ LV_ATTRIBUTE_FAST_MEM static lv_res_t lv_img_draw_core(const lv_area_t * coords,
                 return LV_RES_INV;
             }
 
-            lv_draw_map(&line, &mask_line, buf, draw_dsc, chroma_keyed, alpha_byte);
+            lv_draw_map(&line, &mask_line, buf, draw_dsc, chroma_keyed, alpha_byte
+#if LV_USE_GPU_NXP_VG_LITE
+                        , NULL
+#endif
+            );
             line.y1++;
             line.y2++;
             y++;
@@ -336,7 +354,11 @@ LV_ATTRIBUTE_FAST_MEM static lv_res_t lv_img_draw_core(const lv_area_t * coords,
 LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const lv_area_t * clip_area,
                                               const uint8_t * map_p,
                                               const lv_draw_img_dsc_t * draw_dsc,
-                                              bool chroma_key, bool alpha_byte)
+                                              bool chroma_key, bool alpha_byte
+#if LV_USE_GPU_NXP_VG_LITE
+                                            , void * vgbuf
+#endif
+                                              )
 {
     /*Use the clip area as draw area*/
     lv_area_t draw_area;
@@ -387,6 +409,7 @@ LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const 
 
         /*Go to the first displayed pixel of the map*/
         int32_t map_w = lv_area_get_width(map_area);
+        int32_t map_h = lv_area_get_height(map_area);
         const uint8_t * map_buf_tmp = map_p;
         map_buf_tmp += map_w * (draw_area.y1 - (map_area->y1 - disp_area->y1)) * px_size_byte;
         map_buf_tmp += (draw_area.x1 - (map_area->x1 - disp_area->x1)) * px_size_byte;
@@ -405,7 +428,65 @@ LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const 
 
         lv_coord_t draw_area_h = lv_area_get_height(&draw_area);
         lv_coord_t draw_area_w = lv_area_get_width(&draw_area);
+        if (map_w * draw_dsc->zoom > draw_area_w * 256)
+            LV_LOG_ERROR("CROP!! map:(%d,%d)-(%d,%d) draw(%d,%d)-(%d,%d) zoom:%d",map_area->x1,map_area->y1,map_area->x2,map_area->y2,draw_area.x1,draw_area.y1,draw_area.x2,draw_area.y2,draw_dsc->zoom);
+#if LV_USE_GPU_NXP_VG_LITE
+    /*Special case without masking and color keying*/
+        if(vgbuf && other_mask_cnt == 0 && chroma_key == false && draw_dsc->recolor_opa == LV_OPA_TRANSP &&
+            lv_area_get_size(&draw_area) >= LV_GPU_NXP_VG_LITE_FILL_SIZE_LIMIT) {
+            int32_t disp_w = lv_area_get_width(disp_area);
+            lv_color_t * disp_buf = draw_buf->buf_act;
+            lv_gpu_nxp_vglite_blit_info_t blit;
 
+            if (draw_dsc->zoom == LV_IMG_ZOOM_NONE) {
+                blit.src_width = draw_area_w;
+                blit.src_height = draw_area_h;
+                blit.src_area.x1 = (draw_area.x1 - (map_area->x1 - disp_area->x1));
+                blit.src_area.y1 = (draw_area.y1 - (map_area->y1 - disp_area->y1));
+            }
+            else {
+                lv_area_t map_tf;
+                _lv_img_buf_get_transformed_area(&map_tf, map_w, map_h, draw_dsc->angle, draw_dsc->zoom, &draw_dsc->pivot);
+                lv_area_move(&map_tf, map_area->x1 + draw_dsc->pivot.x - ((map_tf.x1+map_tf.x2)>>1) - disp_area->x1, map_area->y1 + draw_dsc->pivot.y - ((map_tf.y1+map_tf.y2)>>1) - disp_area->y1);
+                blit.src_width = (draw_area_w << 8) / draw_dsc->zoom;
+                if (blit.src_width > map_w) {
+                    blit.src_width = map_w;
+                }
+                blit.src_height = (draw_area_h << 8) / draw_dsc->zoom;
+                if (blit.src_height > map_h) {
+                    blit.src_height = map_h;
+                }
+                blit.src_area.x1 = ((draw_area.x1 - map_tf.x1) << 8) / draw_dsc->zoom;
+                blit.src_area.y1 = ((draw_area.y1 - map_tf.y1) << 8) / draw_dsc->zoom;
+            }
+
+            blit.src = map_p;
+            blit.src_stride = lv_area_get_width(map_area) * sizeof(lv_color_t);
+            blit.src_area.x2 = blit.src_area.x1 + blit.src_width - 1;
+            blit.src_area.y2 = blit.src_area.y1 + blit.src_height - 1;
+            blit.src_vgbuf = vgbuf;
+            blit.dst = disp_buf;
+            blit.dst_width = disp_w;
+            blit.dst_height = lv_area_get_height(disp_area);
+            blit.dst_stride = disp_w * sizeof(lv_color_t);
+            blit.dst_area.x1 = draw_area.x1;
+            blit.dst_area.y1 = draw_area.y1;
+            blit.dst_area.x2 = blit.dst_area.x1 + draw_area_w - 1;
+            blit.dst_area.y2 = blit.dst_area.y1 + draw_area_h - 1;
+
+            blit.opa = draw_dsc->opa;
+            blit.angle = draw_dsc->angle;
+            blit.zoom = draw_dsc->zoom;
+            blit.pivot = draw_dsc->pivot;
+            blit.blend_mode = draw_dsc->blend_mode;
+
+            if(lv_gpu_nxp_vglite_blit(&blit) == LV_RES_OK) {
+                return;
+            }
+            LV_LOG_ERROR("GPU blit failed! (%d %d %d %d)", blit.dst_area.x1, blit.dst_area.y1, blit.dst_area.x2, blit.dst_area.y2);
+            /*Fall down to SW render in case of error*/
+        }
+#endif
         bool transform = draw_dsc->angle != 0 || draw_dsc->zoom != LV_IMG_ZOOM_NONE ? true : false;
         /*Simple ARGB image. Handle it as special case because it's very common*/
         if(other_mask_cnt == 0 && !transform && !chroma_key && draw_dsc->recolor_opa == LV_OPA_TRANSP && alpha_byte) {

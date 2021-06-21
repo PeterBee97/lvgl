@@ -11,6 +11,11 @@
 #include "../draw/lv_draw_img.h"
 #include "../misc/lv_ll.h"
 #include "../misc/lv_gc.h"
+#if LV_USE_GPU_NXP_VG_LITE
+#include "../draw/lv_img_buf.h"
+#include "vg_lite.h"
+#include "../gpu/lv_gpu_nxp_vglite.h"
+#endif
 
 /*********************
  *      DEFINES
@@ -350,6 +355,24 @@ lv_res_t lv_img_decoder_built_in_open(lv_img_decoder_t * decoder, lv_img_decoder
         if(dsc->src_type == LV_IMG_SRC_VARIABLE) {
             /*In case of uncompressed formats the image stored in the ROM/RAM.
              *So simply give its pointer*/
+#if LV_USE_GPU_NXP_VG_LITE
+            vg_lite_buffer_t * vgbuf = (vg_lite_buffer_t *)lv_mem_alloc(sizeof(vg_lite_buffer_t));
+            lv_img_dsc_t * img = (lv_img_dsc_t *)dsc->src;
+            if (init_vg_buf(vgbuf, img->header.w, img->header.h, img->header.w * LV_IMG_PX_SIZE_ALPHA_BYTE) == LV_RES_OK) {
+                if (vg_lite_allocate(vgbuf) == VG_LITE_SUCCESS) {
+                    memcpy(vgbuf->memory, img->data, img->data_size);
+                    dsc->img_data = vgbuf->memory;
+                    if(dsc->user_data == NULL) {
+                        dsc->user_data = vgbuf;
+                        return LV_RES_OK;
+                    }
+                    else {
+                        LV_LOG_ERROR("user_data already used!");
+                    }
+                }
+            }
+            /*init_vg_buf failed*/
+#endif
             dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data;
             return LV_RES_OK;
         }
@@ -476,6 +499,14 @@ void lv_img_decoder_built_in_close(lv_img_decoder_t * decoder, lv_img_decoder_ds
 {
     (void)decoder; /*Unused*/
 
+#if LV_USE_GPU_NXP_VG_LITE
+    if(dsc->src_type == LV_IMG_SRC_VARIABLE && dsc->user_data) {
+        vg_lite_buffer_t * vgbuf = (vg_lite_buffer_t *)dsc->user_data;
+        vg_lite_free(vgbuf);
+        lv_mem_free(vgbuf);
+        return;
+    }
+#endif
     lv_img_decoder_built_in_data_t * user_data = dsc->user_data;
     if(user_data) {
         if(dsc->src_type == LV_IMG_SRC_FILE) {

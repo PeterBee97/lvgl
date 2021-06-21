@@ -9,6 +9,10 @@
 #include "lv_draw_triangle.h"
 #include "../misc/lv_math.h"
 #include "../misc/lv_mem.h"
+#if LV_USE_GPU_NXP_VG_LITE
+#include "../gpu/lv_gpu_nxp_vglite.h"
+#include "vg_lite.h"
+#endif
 
 /*********************
  *      DEFINES
@@ -25,6 +29,9 @@
 /**********************
  *  STATIC VARIABLES
  **********************/
+#if LV_USE_GPU_NXP_VG_LITE
+static int16_t path_data[640];
+#endif
 
 /**********************
  *      MACROS
@@ -89,6 +96,41 @@ void lv_draw_polygon(const lv_point_t points[], uint16_t point_cnt, const lv_are
         lv_mem_buf_release(p);
         return;
     }
+
+#if LV_USE_GPU_NXP_VG_LITE
+    uint16_t path_size = (point_cnt * 3 + 4) * sizeof(int16_t);
+    uint16_t j = 3;
+    vg_lite_path_t path;
+
+    path_data[0] = VLC_OP_MOVE;
+    path_data[1] = p[0].x;
+    path_data[2] = p[0].y;
+    for(i = 1; i < point_cnt; i++) {
+        path_data[j++] = VLC_OP_LINE;
+        path_data[j++] = p[i].x;
+        path_data[j++] = p[i].y;
+    }
+    path_data[j] = VLC_OP_END;
+
+    if(vg_lite_init_path(&path, VG_LITE_S16, VG_LITE_HIGH, path_size, path_data,
+       clip_area->x1, clip_area->y1, clip_area->x2, clip_area->y2) == VG_LITE_SUCCESS) {
+        if (vg_lite_upload_path(&path) == VG_LITE_SUCCESS) {
+            vg_lite_buffer_t * rt_vgbuf = vglite_get_buffer(NULL);
+            vg_lite_matrix_t matrix;
+            vg_lite_identity(&matrix);
+            vg_lite_error_t err = vg_lite_draw(rt_vgbuf, &path, VG_LITE_FILL_EVEN_ODD, &matrix,
+                                  VG_LITE_BLEND_SRC_OVER, draw_dsc->bg_color.full);
+            err |= vg_lite_finish();
+            vg_lite_clear_path(&path);
+            if (err != VG_LITE_SUCCESS) {
+            }
+            else {
+                lv_mem_buf_release(p);
+                return;
+            }
+        }
+    }
+#endif
 
     lv_area_t poly_coords = {.x1 = LV_COORD_MAX, .y1 = LV_COORD_MAX, .x2 = LV_COORD_MIN, .y2 = LV_COORD_MIN};
 
