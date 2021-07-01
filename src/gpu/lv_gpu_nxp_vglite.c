@@ -101,7 +101,7 @@ lv_res_t lv_gpu_nxp_vglite_fill(lv_color_t * dst_buf, lv_coord_t dst_width, lv_c
     vg_lite_error_t err = VG_LITE_SUCCESS;
     lv_color32_t col32 = {.full = lv_color_to32(color)}; /*Convert color to RGBA8888*/
     lv_disp_t * disp = _lv_refr_get_disp_refreshing();
-    vg_lite_buffer_t * rt_vgbuf = (dst_buf == s_buffer1.memory)? &s_buffer1 : &s_buffer2;
+    vg_lite_buffer_t * rt_vgbuf = vglite_get_buffer(dst_buf);
     vg_lite_buffer_t dst_vgbuf;
     lv_coord_t dst_stride = dst_width * sizeof(lv_color_t);
     bool stupid = false;
@@ -234,7 +234,7 @@ lv_res_t lv_gpu_nxp_vglite_blit(lv_gpu_nxp_vglite_blit_info_t * blit)
 
     uint32_t color;
     vg_lite_blend_t blend;
-    vg_lite_buffer_t * rt_vgbuf = (blit->dst == s_buffer1.memory)? &s_buffer1 : &s_buffer2;
+    vg_lite_buffer_t * rt_vgbuf = vglite_get_buffer(blit->dst);
     vg_lite_buffer_t dst_vgbuf;
     bool stupid = false;
 
@@ -273,7 +273,7 @@ lv_res_t lv_gpu_nxp_vglite_blit(lv_gpu_nxp_vglite_blit_info_t * blit)
 
     if(err == VG_LITE_SUCCESS) {
 #if LV_GPU_NXP_VG_LITE_LOG_ERRORS
-        LV_LOG_ERROR("vg_lite_blit_rect (%d %d %d %d) success!", blit->dst_area.x1, blit->dst_area.y1, rect[2], rect[3]);
+        if (rect[2] > 16) LV_LOG_ERROR("vg_lite_blit_rect (%d %d %d %d) success!", blit->dst_area.x1, blit->dst_area.y1, rect[2], rect[3]);
 #endif
         return LV_RES_OK;
     }
@@ -302,7 +302,7 @@ lv_res_t init_vg_buf(void * vdst, uint32_t width, uint32_t height, uint32_t stri
     vg_lite_buffer_t * dst = vdst;
     lv_disp_t * disp_refr = _lv_refr_get_disp_refreshing();
     lv_disp_draw_buf_t * draw_buf = lv_disp_get_draw_buf(disp_refr);
-    vg_lite_buffer_t * buffer_act = (draw_buf->buf_act == s_buffer1.memory)? &s_buffer1 : &s_buffer2;
+    vg_lite_buffer_t * buffer_act = vglite_get_buffer(draw_buf->buf_act);
 
     if((stride % (LV_GPU_NXP_VG_LITE_STRIDE_ALIGN_PX * sizeof(lv_color_t))) != 0x0) {  /*Test for stride alignment*/
 #if LV_GPU_NXP_VG_LITE_LOG_ERRORS
@@ -361,8 +361,14 @@ void lv_gpu_nxp_vglite_init(lv_color_t **buf1, lv_color_t** buf2, lv_coord_t fb_
     *buf2 = s_buffer2.memory;
 }
 
-void lv_gpu_nxp_vglite_wait(struct _lv_disp_drv_t * disp_drv)
+void * vglite_get_buffer(const lv_color_t * dst_buf)
 {
-    vg_lite_finish();
+    if (dst_buf && dst_buf != 1) {
+        return (dst_buf == s_buffer1.memory)? &s_buffer1 : &s_buffer2;
+    }
+    lv_disp_t * disp_refr = _lv_refr_get_disp_refreshing();
+    lv_disp_draw_buf_t * draw_buf = lv_disp_get_draw_buf(disp_refr);
+    return (draw_buf->buf_act == s_buffer1.memory) ^ (int)dst_buf? &s_buffer1 : &s_buffer2;
 }
+
 #endif /*LV_USE_GPU_NXP_VG_LITE*/

@@ -130,9 +130,9 @@ lv_res_t lv_gpu_nxp_vglite_blit(lv_gpu_nxp_vglite_blit_info_t * blit);
 
 void lv_gpu_nxp_vglite_init(lv_color_t **buf1, lv_color_t** buf2, lv_coord_t fb_width, lv_coord_t fb_height);
 
-void lv_gpu_nxp_vglite_wait(struct _lv_disp_drv_t * disp_drv);
-
 lv_res_t init_vg_buf(void * vdst, uint32_t width, uint32_t height, uint32_t stride);
+
+void * vglite_get_buffer(const lv_color_t * dst_buf);
 
 #ifdef __cplusplus
 } /*extern "C"*/

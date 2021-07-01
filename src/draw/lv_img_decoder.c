@@ -359,24 +359,22 @@ lv_res_t lv_img_decoder_built_in_open(lv_img_decoder_t * decoder, lv_img_decoder
             vg_lite_buffer_t * vgbuf = (vg_lite_buffer_t *)lv_mem_alloc(sizeof(vg_lite_buffer_t));
             lv_img_dsc_t * img = (lv_img_dsc_t *)dsc->src;
             if (init_vg_buf(vgbuf, img->header.w, img->header.h, img->header.w * LV_IMG_PX_SIZE_ALPHA_BYTE) == LV_RES_OK) {
-                LV_LOG_ERROR("allocating (%d,%d)",img->header.w, img->header.h);
-                vg_lite_allocate(vgbuf);
-                memcpy(vgbuf->memory, img->data, img->data_size);
-                dsc->img_data = vgbuf->memory;
-                if(dsc->user_data == NULL) {
-                    dsc->user_data = vgbuf;
-                }
-                else {
-                    LV_LOG_WARN("user_data already used!");
+                // LV_LOG_ERROR("allocating (%d,%d)",img->header.w, img->header.h);
+                if (vg_lite_allocate(vgbuf) == VG_LITE_SUCCESS) {
+                    memcpy(vgbuf->memory, img->data, img->data_size);
+                    dsc->img_data = vgbuf->memory;
+                    if(dsc->user_data == NULL) {
+                        dsc->user_data = vgbuf;
+                        return LV_RES_OK;
+                    }
+                    else {
+                        LV_LOG_WARN("user_data already used!");
+                    }
                 }
             }
-            else {
-                /*init_vg_buf failed*/
-                dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data;
-            }
-#else
-            dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data;
+            /*init_vg_buf failed*/
 #endif
+            dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data; 
             return LV_RES_OK;
         }
         else {
@@ -505,7 +503,7 @@ void lv_img_decoder_built_in_close(lv_img_decoder_t * decoder, lv_img_decoder_ds
 #if LV_USE_GPU_NXP_VG_LITE
     if(dsc->src_type == LV_IMG_SRC_VARIABLE && dsc->user_data) {
         vg_lite_buffer_t * vgbuf = (vg_lite_buffer_t *)dsc->user_data;
-        LV_LOG_ERROR("freeing (%d,%d)",vgbuf->width, vgbuf->height);
+        // LV_LOG_ERROR("freeing (%d,%d)",vgbuf->width, vgbuf->height);
         vg_lite_free(vgbuf);
         lv_mem_free(vgbuf);
         return;
