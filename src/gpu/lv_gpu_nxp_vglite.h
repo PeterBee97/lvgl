@@ -95,6 +95,10 @@ typedef struct {
 
     lv_opa_t opa;            /**< Opacity - alpha mix (0 = source not copied, 255 = 100% opaque)*/
     lv_opa_t *mask;          /**< Opacity mask matrix*/
+    uint16_t angle;          /**< Rotation angle*/
+    lv_point_t pivot;        /**< Rotation pivot*/
+    uint16_t zoom;           /**< Scale (256=100%)*/
+    uint8_t blend_mode;      /**< Blend mode (NORMAL, ADDITIVE, SUBTRACTIVE)*/
 
 } lv_gpu_nxp_vglite_blit_info_t;
 

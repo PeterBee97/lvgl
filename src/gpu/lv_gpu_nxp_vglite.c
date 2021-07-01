@@ -226,6 +226,15 @@ lv_res_t lv_gpu_nxp_vglite_blit(lv_gpu_nxp_vglite_blit_info_t * blit)
 
     vg_lite_matrix_t matrix;
     vg_lite_identity(&matrix);
+    if (blit->angle != 0) {
+      vg_lite_translate(-blit->pivot.x, -blit->pivot.y, &matrix);
+      vg_lite_rotate(blit->angle, &matrix);
+      vg_lite_translate(blit->pivot.x, blit->pivot.y, &matrix);
+    }
+    if (blit->zoom != 256) {
+      vg_lite_float_t scale = blit->zoom / 256.0;
+      vg_lite_scale(scale, scale, &matrix);
+    }
     vg_lite_translate(blit->dst_area.x1, blit->dst_area.y1, &matrix);
 
     if(disp && disp->driver->clean_dcache_cb) {  /*Clean & invalidate cache*/
@@ -233,19 +242,20 @@ lv_res_t lv_gpu_nxp_vglite_blit(lv_gpu_nxp_vglite_blit_info_t * blit)
     }
 
     uint32_t color;
-    vg_lite_blend_t blend;
+    vg_lite_blend_t blend = (blit->blend_mode == LV_BLEND_MODE_NORMAL)? VG_LITE_BLEND_SRC_OVER :
+                            (blit->blend_mode == LV_BLEND_MODE_ADDITIVE)? VG_LITE_BLEND_ADDITIVE :
+                            (blit->blend_mode == LV_BLEND_MODE_SUBTRACTIVE)? VG_LITE_BLEND_SUBTRACT :
+                            VG_LITE_BLEND_NONE;
     vg_lite_buffer_t * rt_vgbuf = vglite_get_buffer(blit->dst);
     vg_lite_buffer_t dst_vgbuf;
     bool stupid = false;
 
     if(blit->opa >= LV_OPA_MAX) {
         color = 0x0;
-        blend = VG_LITE_BLEND_SRC_OVER;
         ((vg_lite_buffer_t *)blit->src_vgbuf)->image_mode = VG_LITE_NORMAL_IMAGE_MODE;
     }
     else {
         color = ((blit->opa) << 24) | ((blit->opa) << 16) | ((blit->opa) << 8) | (blit->opa);
-        blend = VG_LITE_BLEND_SRC_OVER;
         ((vg_lite_buffer_t *)blit->src_vgbuf)->image_mode = VG_LITE_MULTIPLY_IMAGE_MODE;
     }
     if (rt_vgbuf->stride == blit->dst_stride) {
