@@ -401,48 +401,6 @@ LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const 
         lv_gpu_nxp_pxp_disable_recolor();
     }
 #endif
-#if LV_USE_GPU_NXP_VG_LITE
-    /*Special case without masking and color keying*/
-    else if(vgbuf && other_mask_cnt == 0 && chroma_key == false && draw_dsc->recolor_opa == LV_OPA_TRANSP &&
-            lv_area_get_size(&draw_area) >= LV_GPU_NXP_VG_LITE_FILL_SIZE_LIMIT) {
-              int32_t disp_w = lv_area_get_width(disp_area);
-              lv_color_t * disp_buf = draw_buf->buf_act;
-              // lv_color_t * disp_buf_first = disp_buf + disp_w * draw_area.y1 + draw_area.x1;
-              lv_gpu_nxp_vglite_blit_info_t blit;
-
-              blit.src = map_p;
-              blit.src_width = draw_area_w;
-              blit.src_height = draw_area_h;
-              blit.src_stride = lv_area_get_width(map_area) * sizeof(lv_color_t);
-              // blit.src_stride = blit.src_width * sizeof(lv_color_t);
-              blit.src_area.x1 = (draw_area.x1 - (map_area->x1 - disp_area->x1));
-              blit.src_area.y1 = (draw_area.y1 - (map_area->y1 - disp_area->y1));
-              blit.src_area.x2 = blit.src_area.x1 + draw_area_w - 1;
-              blit.src_area.y2 = blit.src_area.y1 + draw_area_h - 1;
-              blit.src_vgbuf = vgbuf;
-
-              blit.dst = disp_buf;
-              blit.dst_width = disp_w;
-              blit.dst_height = lv_area_get_height(disp_area);
-              blit.dst_stride = disp_w * sizeof(lv_color_t);
-              blit.dst_area.x1 = draw_area.x1;
-              blit.dst_area.y1 = draw_area.y1;
-              blit.dst_area.x2 = blit.dst_area.x1 + draw_area_w - 1;
-              blit.dst_area.y2 = blit.dst_area.y1 + draw_area_h - 1;
-
-              blit.opa = draw_dsc->opa;
-              blit.angle = draw_dsc->angle;
-              blit.zoom = draw_dsc->zoom;
-              blit.pivot = draw_dsc->pivot;
-              blit.blend_mode = draw_dsc->blend_mode;
-
-              if(lv_gpu_nxp_vglite_blit(&blit) == LV_RES_OK) {
-                  return;
-              }
-              LV_LOG_ERROR("GPU blit failed! (%d %d %d %d)", blit.dst_area.x1, blit.dst_area.y1, blit.dst_area.x2, blit.dst_area.y2);
-              /*Fall down to SW render in case of error*/
-            }
-#endif
     /*In the other cases every pixel need to be checked one-by-one*/
     else {
 //#if LV_DRAW_COMPLEX
@@ -469,7 +427,48 @@ LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const 
 
         lv_coord_t draw_area_h = lv_area_get_height(&draw_area);
         lv_coord_t draw_area_w = lv_area_get_width(&draw_area);
+#if LV_USE_GPU_NXP_VG_LITE
+    /*Special case without masking and color keying*/
+        if(vgbuf && other_mask_cnt == 0 && chroma_key == false && draw_dsc->recolor_opa == LV_OPA_TRANSP &&
+            lv_area_get_size(&draw_area) >= LV_GPU_NXP_VG_LITE_FILL_SIZE_LIMIT) {
+            int32_t disp_w = lv_area_get_width(disp_area);
+            lv_color_t * disp_buf = draw_buf->buf_act;
+            // lv_color_t * disp_buf_first = disp_buf + disp_w * draw_area.y1 + draw_area.x1;
+            lv_gpu_nxp_vglite_blit_info_t blit;
 
+            blit.src = map_p;
+            blit.src_width = draw_area_w;
+            blit.src_height = draw_area_h;
+            blit.src_stride = lv_area_get_width(map_area) * sizeof(lv_color_t);
+            // blit.src_stride = blit.src_width * sizeof(lv_color_t);
+            blit.src_area.x1 = (draw_area.x1 - (map_area->x1 - disp_area->x1));
+            blit.src_area.y1 = (draw_area.y1 - (map_area->y1 - disp_area->y1));
+            blit.src_area.x2 = blit.src_area.x1 + draw_area_w - 1;
+            blit.src_area.y2 = blit.src_area.y1 + draw_area_h - 1;
+            blit.src_vgbuf = vgbuf;
+
+            blit.dst = disp_buf;
+            blit.dst_width = disp_w;
+            blit.dst_height = lv_area_get_height(disp_area);
+            blit.dst_stride = disp_w * sizeof(lv_color_t);
+            blit.dst_area.x1 = draw_area.x1;
+            blit.dst_area.y1 = draw_area.y1;
+            blit.dst_area.x2 = blit.dst_area.x1 + draw_area_w - 1;
+            blit.dst_area.y2 = blit.dst_area.y1 + draw_area_h - 1;
+
+            blit.opa = draw_dsc->opa;
+            blit.angle = draw_dsc->angle;
+            blit.zoom = draw_dsc->zoom;
+            blit.pivot = draw_dsc->pivot;
+            blit.blend_mode = draw_dsc->blend_mode;
+
+            if(lv_gpu_nxp_vglite_blit(&blit) == LV_RES_OK) {
+                return;
+            }
+            LV_LOG_ERROR("GPU blit failed! (%d %d %d %d)", blit.dst_area.x1, blit.dst_area.y1, blit.dst_area.x2, blit.dst_area.y2);
+            /*Fall down to SW render in case of error*/
+        }
+#endif
         bool transform = draw_dsc->angle != 0 || draw_dsc->zoom != LV_IMG_ZOOM_NONE ? true : false;
         /*Simple ARGB image. Handle it as special case because it's very common*/
         if(other_mask_cnt == 0 && !transform && !chroma_key && draw_dsc->recolor_opa == LV_OPA_TRANSP && alpha_byte) {

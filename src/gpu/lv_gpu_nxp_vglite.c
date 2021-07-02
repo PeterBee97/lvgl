@@ -226,16 +226,17 @@ lv_res_t lv_gpu_nxp_vglite_blit(lv_gpu_nxp_vglite_blit_info_t * blit)
 
     vg_lite_matrix_t matrix;
     vg_lite_identity(&matrix);
+    vg_lite_float_t scale = blit->zoom / 256.0;
+    if (blit->zoom != 256) {
+      vg_lite_scale(scale, scale, &matrix);
+      return LV_RES_INV;
+    }
     if (blit->angle != 0) {
       vg_lite_translate(-blit->pivot.x, -blit->pivot.y, &matrix);
       vg_lite_rotate(blit->angle, &matrix);
       vg_lite_translate(blit->pivot.x, blit->pivot.y, &matrix);
     }
-    if (blit->zoom != 256) {
-      vg_lite_float_t scale = blit->zoom / 256.0;
-      vg_lite_scale(scale, scale, &matrix);
-    }
-    vg_lite_translate(blit->dst_area.x1, blit->dst_area.y1, &matrix);
+    vg_lite_translate(blit->dst_area.x1 / scale, blit->dst_area.y1 / scale, &matrix);
 
     if(disp && disp->driver->clean_dcache_cb) {  /*Clean & invalidate cache*/
         disp->driver->clean_dcache_cb(disp->driver);
