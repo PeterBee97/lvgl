@@ -229,7 +229,6 @@ lv_res_t lv_gpu_nxp_vglite_blit(lv_gpu_nxp_vglite_blit_info_t * blit)
     vg_lite_float_t scale = blit->zoom / 256.0;
     if (blit->zoom != 256) {
       vg_lite_scale(scale, scale, &matrix);
-      return LV_RES_INV;
     }
     if (blit->angle != 0) {
       vg_lite_translate(-blit->pivot.x, -blit->pivot.y, &matrix);

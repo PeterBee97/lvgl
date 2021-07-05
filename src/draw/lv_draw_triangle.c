@@ -111,12 +111,10 @@ void lv_draw_polygon(const lv_point_t points[], uint16_t point_cnt, const lv_are
     path_data[0] = VLC_OP_MOVE;
     path_data[1] = p[0].x;
     path_data[2] = p[0].y;
-    LV_LOG_ERROR("%d %d", p[0].x, p[0].y);
     for(i = 1; i < point_cnt; i++) {
         path_data[j++] = VLC_OP_LINE;
         path_data[j++] = p[i].x;
         path_data[j++] = p[i].y;
-        LV_LOG_ERROR("%d %d", p[i].x, p[i].y);
     }
     path_data[j] = VLC_OP_END;
 
@@ -129,10 +127,8 @@ void lv_draw_polygon(const lv_point_t points[], uint16_t point_cnt, const lv_are
             err |= vg_lite_finish();
             vg_lite_clear_path(&path);
             if (err != VG_LITE_SUCCESS) {
-                LV_LOG_ERROR("vg_lite draw polygon failed");
             }
             else {
-                LV_LOG_ERROR("vg_lite draw polygon success");
                 lv_mem_buf_release(p);
                 return;
             }

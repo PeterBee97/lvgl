@@ -409,6 +409,7 @@ LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const 
 
         /*Go to the first displayed pixel of the map*/
         int32_t map_w = lv_area_get_width(map_area);
+        int32_t map_h = lv_area_get_height(map_area);
         const uint8_t * map_buf_tmp = map_p;
         map_buf_tmp += map_w * (draw_area.y1 - (map_area->y1 - disp_area->y1)) * px_size_byte;
         map_buf_tmp += (draw_area.x1 - (map_area->x1 - disp_area->x1)) * px_size_byte;
@@ -427,6 +428,8 @@ LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const 
 
         lv_coord_t draw_area_h = lv_area_get_height(&draw_area);
         lv_coord_t draw_area_w = lv_area_get_width(&draw_area);
+        if (map_w * draw_dsc->zoom > draw_area_w * 256) 
+            LV_LOG_ERROR("CROP!! map:(%d,%d)-(%d,%d) draw(%d,%d)-(%d,%d) zoom:%d",map_area->x1,map_area->y1,map_area->x2,map_area->y2,draw_area.x1,draw_area.y1,draw_area.x2,draw_area.y2,draw_dsc->zoom);
 #if LV_USE_GPU_NXP_VG_LITE
     /*Special case without masking and color keying*/
         if(vgbuf && other_mask_cnt == 0 && chroma_key == false && draw_dsc->recolor_opa == LV_OPA_TRANSP &&
@@ -436,17 +439,33 @@ LV_ATTRIBUTE_FAST_MEM static void lv_draw_map(const lv_area_t * map_area, const 
             // lv_color_t * disp_buf_first = disp_buf + disp_w * draw_area.y1 + draw_area.x1;
             lv_gpu_nxp_vglite_blit_info_t blit;
 
-            blit.src = map_p;
-            blit.src_width = draw_area_w;
-            blit.src_height = draw_area_h;
-            blit.src_stride = lv_area_get_width(map_area) * sizeof(lv_color_t);
-            // blit.src_stride = blit.src_width * sizeof(lv_color_t);
-            blit.src_area.x1 = (draw_area.x1 - (map_area->x1 - disp_area->x1));
-            blit.src_area.y1 = (draw_area.y1 - (map_area->y1 - disp_area->y1));
-            blit.src_area.x2 = blit.src_area.x1 + draw_area_w - 1;
-            blit.src_area.y2 = blit.src_area.y1 + draw_area_h - 1;
-            blit.src_vgbuf = vgbuf;
+            if (draw_dsc->zoom == LV_IMG_ZOOM_NONE) {
+                blit.src_width = draw_area_w;
+                blit.src_height = draw_area_h;
+                blit.src_area.x1 = (draw_area.x1 - (map_area->x1 - disp_area->x1));
+                blit.src_area.y1 = (draw_area.y1 - (map_area->y1 - disp_area->y1));
+            }
+            else {
+                lv_area_t map_tf;
+                _lv_img_buf_get_transformed_area(&map_tf, map_w, map_h, draw_dsc->angle, draw_dsc->zoom, &draw_dsc->pivot);
+                lv_area_move(&map_tf, map_area->x1 + draw_dsc->pivot.x - ((map_tf.x1+map_tf.x2)>>1) - disp_area->x1, map_area->y1 + draw_dsc->pivot.y - ((map_tf.y1+map_tf.y2)>>1) - disp_area->y1);
+                blit.src_width = (draw_area_w << 8) / draw_dsc->zoom;
+                if (blit.src_width > map_w) {
+                    blit.src_width = map_w;
+                }
+                blit.src_height = (draw_area_h << 8) / draw_dsc->zoom;
+                if (blit.src_height > map_h) {
+                    blit.src_height = map_h;
+                }
+                blit.src_area.x1 = ((draw_area.x1 - map_tf.x1) << 8) / draw_dsc->zoom;
+                blit.src_area.y1 = ((draw_area.y1 - map_tf.y1) << 8) / draw_dsc->zoom;
+            }
 
+            blit.src = map_p;
+            blit.src_stride = lv_area_get_width(map_area) * sizeof(lv_color_t);
+            blit.src_area.x2 = blit.src_area.x1 + blit.src_width - 1;
+            blit.src_area.y2 = blit.src_area.y1 + blit.src_height - 1;
+            blit.src_vgbuf = vgbuf;
             blit.dst = disp_buf;
             blit.dst_width = disp_w;
             blit.dst_height = lv_area_get_height(disp_area);
