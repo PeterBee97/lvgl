@@ -41,6 +41,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    #include "../draw/ambiq/lv_gpu_ambiq_nema.h"
+#endif
+
 #if LV_USE_GPU_STM32_DMA2D
     #include "../draw/stm32_dma2d/lv_gpu_stm32_dma2d.h"
 #endif
@@ -133,6 +137,11 @@ void lv_init(void)
     _lv_group_init();
 
     lv_draw_init();
+
+#if LV_USE_GPU_AMBIQ_NEMA
+    /*Initialize DMA2D GPU*/
+    lv_draw_ambiq_nema_init();
+#endif
 
 #if LV_USE_GPU_STM32_DMA2D
     /*Initialize DMA2D GPU*/

@@ -29,6 +29,10 @@
     #include "../draw/arm2d/lv_gpu_arm2d.h"
 #endif
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    #include "../draw/ambiq/lv_gpu_ambiq_nema.h"
+#endif
+
 #if LV_USE_GPU_NXP_PXP || LV_USE_GPU_NXP_VG_LITE
     #include "../draw/nxp/lv_gpu_nxp.h"
 #endif
@@ -101,6 +105,8 @@ lv_disp_t * lv_disp_create(lv_coord_t hor_res, lv_coord_t ver_res)
     lv_disp_set_draw_ctx(disp, lv_draw_sdl_init_ctx, lv_draw_sdl_deinit_ctx, sizeof(lv_draw_sdl_ctx_t));
 #elif LV_USE_GPU_ARM2D
     lv_disp_set_draw_ctx(disp, lv_draw_arm2d_ctx_init, lv_draw_arm2d_ctx_deinit, sizeof(lv_draw_arm2d_ctx_t));
+#elif LV_USE_GPU_AMBIQ_NEMA
+    lv_disp_set_draw_ctx(disp, lv_draw_ambiq_ctx_init, lv_draw_ambiq_ctx_deinit, sizeof(lv_draw_ambiq_ctx_t));
 #else
     lv_disp_set_draw_ctx(disp, lv_draw_sw_init_ctx, lv_draw_sw_deinit_ctx, sizeof(lv_draw_sw_ctx_t));
 #endif

@@ -212,6 +212,20 @@ menu "LVGL configuration"
 		endmenu
 
 		menu "GPU"
+			config LV_USE_EXTERNAL_RENDERER
+				bool
+
+			config LV_USE_GPU_AMBIQ_NEMA
+				bool "Enable AMBIQ NEMA GPU."
+				default n
+			config LV_GPU_AMBIQ_NEMA_INCLUDE
+				string "include path of AMBIQ NEMA header"
+				depends on LV_USE_GPU_AMBIQ_NEMA
+				default "nema_core.h"
+				help
+					Must be defined to include path of Ambiq NemaGFX header
+					e.g. "nema_core.h"
+
 			config LV_USE_GPU_ARM2D
 				bool "Enable Arm's 2D image processing library (Arm-2D) for all Cortex-M processors."
 				default n

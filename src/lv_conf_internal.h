@@ -526,6 +526,26 @@
  * GPU CONFIGURATION
  *=====================*/
 
+/*Use Ambiq's NEMA GPU */
+#ifndef LV_USE_GPU_AMBIQ_NEMA
+    #ifdef CONFIG_LV_USE_GPU_AMBIQ_NEMA
+        #define LV_USE_GPU_AMBIQ_NEMA CONFIG_LV_USE_GPU_AMBIQ_NEMA
+    #else
+        #define LV_USE_GPU_AMBIQ_NEMA 0
+    #endif
+#endif
+#if LV_USE_GPU_AMBIQ_NEMA
+    /*Must be defined to include path of Ambiq NemaGFX header
+    e.g. "nema_core.h" */
+    #ifndef LV_GPU_AMBIQ_NEMA_INCLUDE
+        #ifdef CONFIG_LV_GPU_AMBIQ_NEMA_INCLUDE
+            #define LV_GPU_AMBIQ_NEMA_INCLUDE CONFIG_LV_GPU_AMBIQ_NEMA_INCLUDE
+        #else
+            #define LV_GPU_AMBIQ_NEMA_INCLUDE
+        #endif
+    #endif
+#endif
+
 /*Use Arm's 2D acceleration library Arm-2D */
 #ifndef LV_USE_GPU_ARM2D
     #ifdef CONFIG_LV_USE_GPU_ARM2D

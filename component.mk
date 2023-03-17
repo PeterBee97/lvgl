@@ -10,6 +10,7 @@ COMPONENT_SRCDIRS := . \
                   src/misc \
                   src/widgets \
                   src/draw/arm2d \
+                  src/draw/ambiq \
                   src/draw/nxp \
                   src/draw/sdl \
                   src/draw/stm32_dma2d \
