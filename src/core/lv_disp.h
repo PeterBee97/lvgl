@@ -249,6 +249,14 @@ void lv_disp_set_draw_buffers(lv_disp_t * disp, void * buf1, void * buf2, uint32
  */
 void lv_disp_set_flush_cb(lv_disp_t * disp, void (*flush_cb)(struct _lv_disp_t * disp, const lv_area_t * area,
                                                              lv_color_t * px_map));
+
+/**
+ * Set the rounder callback which will be called to extend the invalidated areas to match with the display drivers requirements.
+ * @param disp        pointer to a display
+ * @param rounder_cb  the rounder callback
+ */
+void lv_disp_set_rounder_cb(lv_disp_t * disp, void (*rounder_cb)(struct _lv_disp_t * disp, lv_area_t * area));
+
 /**
  * Set the color format of the display.
  * If set to other than `LV_COLOR_FORMAT_NATIVE` the draw_ctx's `buffer_convert` function will be used

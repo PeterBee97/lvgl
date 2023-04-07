@@ -72,6 +72,10 @@ struct _lv_disp_t {
      * called when finished*/
     void (*flush_cb)(struct _lv_disp_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
 
+    /** OPTIONAL: Extend the invalidated areas to match with the display drivers requirements
+     * E.g. round `y` to, 8, 16 ..) on a monochrome display*/
+    void (*rounder_cb)(struct _lv_disp_t * disp_drv, lv_area_t * area);
+
     /*1: flushing is in progress. (It can't be a bit field because when it's cleared from IRQ Read-Modify-Write issue might occur)*/
     volatile int flushing;
 

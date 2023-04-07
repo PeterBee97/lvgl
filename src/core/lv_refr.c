@@ -239,6 +239,8 @@ void _lv_inv_area(lv_disp_t * disp, const lv_area_t * area_p)
         return;
     }
 
+    if(disp->rounder_cb) disp->rounder_cb(disp, &com_area);
+
     lv_res_t res = lv_disp_send_event(disp, LV_EVENT_INVALIDATE_AREA, &com_area);
     if(res != LV_RES_OK) return;
 

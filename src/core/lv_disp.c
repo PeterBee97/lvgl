@@ -410,6 +410,14 @@ void lv_disp_set_flush_cb(lv_disp_t * disp, void (*flush_cb)(struct _lv_disp_t *
     disp->flush_cb = flush_cb;
 }
 
+void lv_disp_set_rounder_cb(lv_disp_t * disp, void (*rounder_cb)(struct _lv_disp_t * disp, lv_area_t * area))
+{
+    if(disp == NULL) disp = lv_disp_get_default();
+    if(disp == NULL) return;
+
+    disp->rounder_cb = rounder_cb;
+}
+
 void lv_disp_set_color_format(lv_disp_t * disp, lv_color_format_t color_format)
 {
     if(disp == NULL) disp = lv_disp_get_default();
