@@ -34,7 +34,7 @@ typedef enum {
      * E.g. even if a scene was rendered in 1 ms, but the screen is redrawn only in every 100 ms, the result will be 10 FPS.*/
     LV_DEMO_BENCHMARK_MODE_REAL,
 
-    /**Temporarily display the `flush_cb` so the pure rendering time will be measured.
+    /**Temporarily disable the `flush_cb` so the pure rendering time will be measured.
      * The display is not updated during the benchmark, only at the end when the summary table is shown.
      * Render a given number of frames from each scene adn calculate the FPS from them.*/
     LV_DEMO_BENCHMARK_MODE_RENDER_ONLY,
