@@ -208,6 +208,8 @@ static void profile_create(lv_obj_t * parent)
     LV_IMG_DECLARE(img_demo_widgets_avatar);
     lv_obj_t * avatar = lv_img_create(panel1);
     lv_img_set_src(avatar, &img_demo_widgets_avatar);
+    lv_img_set_angle(avatar, 450);
+    lv_img_set_zoom(avatar, 300);
 
     lv_obj_t * name = lv_label_create(panel1);
     lv_label_set_text(name, "Elena Smith");

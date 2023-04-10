@@ -12,6 +12,10 @@
 #include "../misc/lv_ll.h"
 #include "../misc/lv_gc.h"
 
+#if LV_USE_GPU_AMBIQ_NEMA
+#include LV_GPU_AMBIQ_NEMA_INCLUDE
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -24,6 +28,9 @@ typedef struct {
     lv_fs_file_t f;
     lv_color_t * palette;
     lv_opa_t * opa;
+#if LV_USE_GPU_AMBIQ_NEMA
+    nema_buffer_t bo;
+#endif
 } lv_img_decoder_built_in_data_t;
 
 /**********************
@@ -122,6 +129,20 @@ lv_res_t lv_img_decoder_open(lv_img_decoder_dsc_t * dsc, const void * src, lv_co
     }
     else {
         dsc->src = src;
+#if LV_USE_GPU_AMBIQ_NEMA
+        const lv_img_dsc_t * img_dsc = src;
+        dsc->user_data = lv_malloc(sizeof(lv_img_decoder_built_in_data_t));
+        LV_ASSERT_MALLOC(dsc->user_data);
+        if(dsc->user_data == NULL) {
+            LV_LOG_ERROR("out of memory");
+            return LV_RES_INV;
+        }
+        lv_memzero(dsc->user_data, sizeof(lv_img_decoder_built_in_data_t));
+        lv_img_decoder_built_in_data_t * user_data = dsc->user_data;
+        user_data->bo = nema_buffer_create(img_dsc->data_size);
+        if (user_data->bo.base_virt == NULL) return LV_RES_INV;
+        lv_memcpy(user_data->bo.base_virt, img_dsc->data, img_dsc->data_size);
+#endif
     }
 
     lv_res_t res = LV_RES_INV;
@@ -373,7 +394,11 @@ lv_res_t lv_img_decoder_built_in_open(lv_img_decoder_t * decoder, lv_img_decoder
         else {
             /*In case of uncompressed formats the image stored in the ROM/RAM.
              *So simply give its pointer*/
+#if LV_USE_GPU_AMBIQ_NEMA
+            dsc->img_data = ((lv_img_decoder_built_in_data_t*)dsc->user_data)->bo.base_virt;
+#else
             dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data;
+#endif
         }
         return LV_RES_OK;
     }
@@ -400,6 +425,9 @@ void lv_img_decoder_built_in_close(lv_img_decoder_t * decoder, lv_img_decoder_ds
         }
         if(user_data->palette) lv_free(user_data->palette);
         if(user_data->opa) lv_free(user_data->opa);
+#if LV_USE_GPU_AMBIQ_NEMA
+        if (user_data->bo.base_virt) nema_buffer_destroy(&user_data->bo);
+#endif
 
         lv_free(user_data);
         dsc->user_data = NULL;

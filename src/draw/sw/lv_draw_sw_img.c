@@ -124,8 +124,8 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_sw_img_decoded(struct _lv_draw_ctx_t * draw_c
         /*Create buffers and masks*/
         uint32_t buf_size = buf_w * buf_h;
 
-        lv_color_t * rgb_buf = lv_malloc(buf_size * sizeof(lv_color_t));
-        lv_opa_t * mask_buf = lv_malloc(buf_size);
+        lv_color_t * rgb_buf = nema_malloc(buf_size * sizeof(lv_color_t));
+        lv_opa_t * mask_buf = nema_malloc(buf_size);
         blend_dsc.mask_buf = mask_buf;
         blend_dsc.mask_area = &blend_area;
         blend_dsc.mask_res = LV_DRAW_MASK_RES_CHANGED;
@@ -197,8 +197,8 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_sw_img_decoded(struct _lv_draw_ctx_t * draw_c
             if(blend_area.y2 > y_last) blend_area.y2 = y_last;
         }
 
-        lv_free(mask_buf);
-        lv_free(rgb_buf);
+        nema_free(mask_buf);
+        nema_free(rgb_buf);
     }
 }
 

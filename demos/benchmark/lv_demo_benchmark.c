@@ -633,13 +633,13 @@ static scene_dsc_t scenes[] = {
     {.name = "Arc think",                    .weight = 10, .create_cb = arc_think_cb},
     {.name = "Arc thick",                    .weight = 10, .create_cb = arc_thick_cb},
 
-    {.name = "Substr. rectangle",            .weight = 10, .create_cb = sub_rectangle_cb},
-    {.name = "Substr. border",               .weight = 10, .create_cb = sub_border_cb},
-    {.name = "Substr. shadow",               .weight = 10, .create_cb = sub_shadow_cb},
-    {.name = "Substr. image",                .weight = 10, .create_cb = sub_img_cb},
-    {.name = "Substr. line",                 .weight = 10, .create_cb = sub_line_cb},
-    {.name = "Substr. arc",                  .weight = 10, .create_cb = sub_arc_cb},
-    {.name = "Substr. text",                 .weight = 10, .create_cb = sub_text_cb},
+//     {.name = "Substr. rectangle",            .weight = 10, .create_cb = sub_rectangle_cb},
+//     {.name = "Substr. border",               .weight = 10, .create_cb = sub_border_cb},
+//     {.name = "Substr. shadow",               .weight = 10, .create_cb = sub_shadow_cb},
+//     {.name = "Substr. image",                .weight = 10, .create_cb = sub_img_cb},
+//     {.name = "Substr. line",                 .weight = 10, .create_cb = sub_line_cb},
+//     {.name = "Substr. arc",                  .weight = 10, .create_cb = sub_arc_cb},
+//     {.name = "Substr. text",                 .weight = 10, .create_cb = sub_text_cb},
 
     {.name = "", .create_cb = NULL}
 };
@@ -679,7 +679,7 @@ static const uint32_t rnd_map[] = {
 
 void lv_demo_benchmark(lv_demo_benchmark_mode_t _mode)
 {
-    mode = _mode;
+    mode = LV_DEMO_BENCHMARK_MODE_RENDER_AND_DRIVER;
     benchmark_init();
 
     if(mode == LV_DEMO_BENCHMARK_MODE_RENDER_ONLY) {

@@ -274,7 +274,8 @@ LV_ATTRIBUTE_FAST_MEM static void draw_letter_normal(lv_draw_ctx_t * draw_ctx, c
 
     lv_coord_t hor_res = lv_disp_get_hor_res(_lv_refr_get_disp_refreshing());
     uint32_t mask_buf_size = box_w * box_h > hor_res ? hor_res : box_w * box_h;
-    lv_opa_t * mask_buf = lv_malloc(mask_buf_size);
+    // lv_opa_t * mask_buf = lv_malloc(mask_buf_size);
+    lv_opa_t * mask_buf = nema_malloc(mask_buf_size);
     blend_dsc.mask_buf = mask_buf;
     int32_t mask_p = 0;
 
@@ -362,7 +363,8 @@ LV_ATTRIBUTE_FAST_MEM static void draw_letter_normal(lv_draw_ctx_t * draw_ctx, c
         mask_p = 0;
     }
 
-    lv_free(mask_buf);
+    // lv_free(mask_buf);
+    nema_free(mask_buf);
 }
 
 #if LV_DRAW_SW_FONT_SUBPX
@@ -429,7 +431,8 @@ static void draw_letter_subpx(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_
 
     lv_coord_t hor_res = lv_disp_get_hor_res(_lv_refr_get_disp_refreshing());
     int32_t mask_buf_size = box_w * box_h > hor_res ? hor_res : g->box_w * g->box_h;
-    lv_opa_t * mask_buf = lv_malloc(mask_buf_size);
+    // lv_opa_t * mask_buf = lv_malloc(mask_buf_size);
+    lv_opa_t * mask_buf = nema_malloc(mask_buf_size);
     int32_t mask_p = 0;
 
     lv_color_t * color_buf = lv_malloc(mask_buf_size * sizeof(lv_color_t));
@@ -564,7 +567,8 @@ static void draw_letter_subpx(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_
         lv_draw_sw_blend(draw_ctx, &blend_dsc);
     }
 
-    lv_free(mask_buf);
+    // lv_free(mask_buf);
+    nema_free(mask_buf);
     lv_free(color_buf);
 }
 #endif /*LV_DRAW_SW_FONT_SUBPX*/

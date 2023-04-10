@@ -471,14 +471,6 @@ menu "LVGL configuration"
 				bool "Use the built-in malloc functions"
 				default y
 
-			config LV_USE_BUILTIN_FREE
-				bool "Use the built-in free functions"
-				default y
-
-			config LV_USE_BUILTIN_REALLOC
-				bool "Use the built-in realloc functions"
-				default y
-
 			config LV_USE_BUILTIN_MEMCPY
 				bool "Use the built-in memcpy functions"
 				default y
