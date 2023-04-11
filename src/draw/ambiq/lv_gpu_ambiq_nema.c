@@ -41,6 +41,8 @@ static void draw_shadow(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc
 
 static void draw_bg(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords, lv_opa_t * mask);
 
+static void draw_bg_img(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords);
+
 static void draw_border(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords, lv_opa_t * mask);
 
 static void draw_outline(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords, lv_opa_t * mask);
@@ -191,6 +193,9 @@ static void lv_draw_ambiq_img_decoded(struct _lv_draw_ctx_t * draw_ctx, const lv
     lv_point_t pivot = dsc->pivot;
     lv_blend_mode_t blend_mode = dsc->blend_mode;
     bool transformed = (angle != 0) || (zoom != LV_ZOOM_NONE);
+    lv_area_t map_area;
+    lv_area_copy(&map_area, coords);
+    lv_area_move(&map_area, -draw_ctx->buf_area->x1, -draw_ctx->buf_area->y1);
     lv_coord_t map_w = lv_area_get_width(coords);
     lv_coord_t map_h = lv_area_get_height(coords);
     lv_opa_t * mask_buf = NULL;
@@ -204,7 +209,6 @@ static void lv_draw_ambiq_img_decoded(struct _lv_draw_ctx_t * draw_ctx, const lv
         /* Continue iff mask operations complete successfully */
         sCL = nema_cl_create();
         nema_cl_bind(&sCL);
-        // nema_set_clip(0, 0, lv_area_get_width(draw_ctx->buf_area), lv_area_get_height(draw_ctx->buf_area));
         nema_set_clip(blend_area.x1, blend_area.y1, blend_w, blend_h);
         uint32_t x_op = NEMA_BLOP_NONE;
 
@@ -232,7 +236,7 @@ static void lv_draw_ambiq_img_decoded(struct _lv_draw_ctx_t * draw_ctx, const lv
         if (!transformed) {
             /* Simple blit */
             nema_blit_subrect(blend_area.x1, blend_area.y1, blend_w, blend_h,
-                draw_ctx->clip_area->x1 - coords->x1, draw_ctx->clip_area->y1 - coords->y1);
+                blend_area.x1 - map_area.x1, blend_area.y1 - map_area.y1);
         } else if (zoom == LV_ZOOM_NONE) {
             /* Rotation w/o zoom*/
             nema_blit_rotate_pivot(blend_area.x1 + pivot.x, blend_area.y1 + pivot.y, pivot.x, pivot.y, angle * 0.1f);
@@ -240,10 +244,10 @@ static void lv_draw_ambiq_img_decoded(struct _lv_draw_ctx_t * draw_ctx, const lv
             /* Arbitrary transform with zoom */
             float m[3][3];
             float scale = zoom / 256.0f;
-            float x[4] = { coords->x1, coords->x2, coords->x2, coords->x1 };
-            float y[4] = { coords->y1, coords->y1, coords->y2, coords->y2 };
-            pivot.x += coords->x1;
-            pivot.y += coords->y1;
+            float x[4] = { map_area.x1, map_area.x2, map_area.x2, map_area.x1 };
+            float y[4] = { map_area.y1, map_area.y1, map_area.y2, map_area.y2 };
+            pivot.x += map_area.x1;
+            pivot.y += map_area.y1;
             nema_mat3x3_load_identity(m);
             nema_mat3x3_translate(m, -pivot.x, -pivot.y);
             nema_mat3x3_scale(m, scale, scale);
@@ -292,6 +296,7 @@ static void lv_draw_ambiq_rect(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_
         draw_shadow(draw_ctx, dsc, coords, mask_buf);
 
         draw_bg(draw_ctx, dsc, coords, mask_buf);
+        draw_bg_img(draw_ctx, dsc, coords);
 
         draw_border(draw_ctx, dsc, coords, mask_buf);
 
@@ -366,11 +371,11 @@ static void draw_bg(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, co
             }
         }
     }
-    nema_set_blend_fill(nema_blending_mode(NEMA_BF_SRCALPHA, NEMA_BF_INVSRCALPHA, x_op));
     if (mask) {
         nema_bind_tex(NEMA_TEX3, mask, w, h, NEMA_A8, -1, NEMA_FILTER_PS);
         x_op |= NEMA_BLOP_STENCIL_TXTY;
     }
+    nema_set_blend_fill(nema_blending_mode(NEMA_BF_SRCALPHA, NEMA_BF_INVSRCALPHA, x_op));
     if (dsc->radius != 0) {
         nema_fill_rounded_rect(bg_coords.x1, bg_coords.y1, w, h, dsc->radius, bg_color_argb);
     } else {
@@ -1164,6 +1169,80 @@ LV_ATTRIBUTE_FAST_MEM static void shadow_blur_corner(lv_coord_t size, lv_coord_t
     }
 
     lv_free(sh_ups_blur_buf);
+}
+
+static void draw_bg_img(lv_draw_ctx_t * draw_ctx, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
+{
+    if(dsc->bg_img_src == NULL) return;
+    if(dsc->bg_img_opa <= LV_OPA_MIN) return;
+
+    lv_area_t clip_area;
+    if(!_lv_area_intersect(&clip_area, coords, draw_ctx->clip_area)) {
+        return;
+    }
+
+    const lv_area_t * clip_area_ori = draw_ctx->clip_area;
+    draw_ctx->clip_area = &clip_area;
+
+    lv_img_src_t src_type = lv_img_src_get_type(dsc->bg_img_src);
+    if(src_type == LV_IMG_SRC_SYMBOL) {
+        lv_point_t size;
+        lv_txt_get_size(&size, dsc->bg_img_src, dsc->bg_img_symbol_font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        lv_area_t a;
+        a.x1 = coords->x1 + lv_area_get_width(coords) / 2 - size.x / 2;
+        a.x2 = a.x1 + size.x - 1;
+        a.y1 = coords->y1 + lv_area_get_height(coords) / 2 - size.y / 2;
+        a.y2 = a.y1 + size.y - 1;
+
+        lv_draw_label_dsc_t label_draw_dsc;
+        lv_draw_label_dsc_init(&label_draw_dsc);
+        label_draw_dsc.font = dsc->bg_img_symbol_font;
+        label_draw_dsc.color = dsc->bg_img_recolor;
+        label_draw_dsc.opa = dsc->bg_img_opa;
+        lv_draw_label(draw_ctx, &label_draw_dsc, &a, dsc->bg_img_src, NULL);
+    }
+    else {
+        lv_img_header_t header;
+        lv_res_t res = lv_img_decoder_get_info(dsc->bg_img_src, &header);
+        if(res == LV_RES_OK) {
+            lv_draw_img_dsc_t img_dsc;
+            lv_draw_img_dsc_init(&img_dsc);
+            img_dsc.blend_mode = dsc->blend_mode;
+            img_dsc.recolor = dsc->bg_img_recolor;
+            img_dsc.recolor_opa = dsc->bg_img_recolor_opa;
+            img_dsc.opa = dsc->bg_img_opa;
+
+            /*Center align*/
+            if(dsc->bg_img_tiled == false) {
+                lv_area_t area;
+                area.x1 = coords->x1 + lv_area_get_width(coords) / 2 - header.w / 2;
+                area.y1 = coords->y1 + lv_area_get_height(coords) / 2 - header.h / 2;
+                area.x2 = area.x1 + header.w - 1;
+                area.y2 = area.y1 + header.h - 1;
+
+                lv_draw_img(draw_ctx, &img_dsc, &area, dsc->bg_img_src);
+            }
+            else {
+                lv_area_t area;
+                area.y1 = coords->y1;
+                area.y2 = area.y1 + header.h - 1;
+
+                for(; area.y1 <= coords->y2; area.y1 += header.h, area.y2 += header.h) {
+
+                    area.x1 = coords->x1;
+                    area.x2 = area.x1 + header.w - 1;
+                    for(; area.x1 <= coords->x2; area.x1 += header.w, area.x2 += header.w) {
+                        lv_draw_img(draw_ctx, &img_dsc, &area, dsc->bg_img_src);
+                    }
+                }
+            }
+        }
+        else {
+            LV_LOG_WARN("Couldn't read the background image");
+        }
+    }
+
+    draw_ctx->clip_area = clip_area_ori;
 }
 
 void lv_draw_ambiq_nema_init(void)
