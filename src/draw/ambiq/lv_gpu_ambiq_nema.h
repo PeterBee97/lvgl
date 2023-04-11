@@ -45,6 +45,8 @@ void lv_draw_ambiq_ctx_deinit(lv_disp_t * drv, lv_draw_ctx_t * draw_ctx);
 
 void lv_draw_ambiq_nema_init(void);
 
+void lv_draw_ambiq_nema_deinit(void);
+
 /**********************
  *      MACROS
  **********************/
